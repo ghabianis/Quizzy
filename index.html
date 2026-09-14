@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kahoot Clone · Supabase Auth</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="css/index.css">
+</head>
+
+<body>
+
+    <!-- AUTH -->
+    <div class="app-container" id="authContainer">
+        <div style="text-align:center; margin-bottom:1rem;">
+            <div class="logo" style="display:inline-block;">🎮 Kahoot! <span>clone</span></div>
+        </div>
+        <div class="auth-screen active" id="authScreen">
+            <div class="auth-tabs">
+                <button type="button" class="auth-tab active" id="loginTab">🔑 Connexion</button>
+                <button type="button" class="auth-tab" id="signupTab">✨ Inscription</button>
+            </div>
+            <div id="authMessages"></div>
+            <form class="auth-form active" id="loginForm">
+                <h2>Bon retour ! 👋</h2>
+                <div class="form-group">
+                    <label>📧 Email</label>
+                    <input type="email" id="loginEmail" placeholder="vous@exemple.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label>🔒 Mot de passe</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required
+                        autocomplete="current-password">
+                </div>
+                <button type="submit" class="auth-submit" id="loginSubmitBtn">Se connecter</button>
+                <div class="auth-switch">Pas de compte ? <a id="switchToSignup">Créer un compte</a></div>
+            </form>
+            <form class="auth-form" id="signupForm">
+                <h2>Rejoins l'aventure ! 🚀</h2>
+                <div class="form-group">
+                    <label>👤 Prénom</label>
+                    <input type="text" id="signupFirstName" placeholder="Ton prénom" required autocomplete="given-name">
+                </div>
+                <div class="form-group">
+                    <label>👤 Nom</label>
+                    <input type="text" id="signupLastName" placeholder="Ton nom" required autocomplete="family-name">
+                </div>
+                <div class="form-group">
+                    <label>📱 Numéro de téléphone</label>
+                    <input type="tel" id="signupPhone" placeholder="+216 12 345 678" required autocomplete="tel">
+                </div>
+                <div class="form-group">
+                    <label>📧 Email</label>
+                    <input type="email" id="signupEmail" placeholder="vous@exemple.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label>🔒 Mot de passe (min. 6 caractères)</label>
+                    <input type="password" id="signupPassword" placeholder="••••••••" required minlength="6"
+                        autocomplete="new-password">
+                </div>
+                <button type="submit" class="auth-submit" id="signupSubmitBtn">Créer mon compte</button>
+                <div class="auth-switch">Déjà inscrit ? <a id="switchToLogin">Se connecter</a></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CELEBRATION -->
+    <div class="celebration-overlay" id="celebrationOverlay">
+        <div id="celebrationParticles"></div>
+        <div class="celebration-content">
+            <div class="celebration-emoji" id="celebrationEmoji">🎉</div>
+            <h1 id="celebrationTitle">BRAVO !</h1>
+            <p id="celebrationSubtitle">Tu as terminé le quiz !</p>
+            <div class="celebration-stats" id="celebrationStats"></div>
+            <div class="celebration-actions">
+                <button class="celebration-retake" id="celebrationRetake">🔁 Refaire</button>
+                <button class="celebration-close" id="celebrationClose">✨ Retour aux quiz</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div class="app-container main-app" id="mainApp">
+        <div class="top-bar">
+            <div class="logo">🎮 Kahoot! <span>clone</span></div>
+            <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+                <div class="connection-status" id="connStatus">
+                    <span class="dot"></span> <span id="connText">Connecté</span>
+                </div>
+                <div class="user-info">
+                    <span class="user-email" id="userEmailDisplay">...</span>
+                    <span class="user-badge" id="userRoleBadge">étudiant</span>
+                    <button class="logout-btn" id="logoutBtn">Déconnexion</button>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-bottom:1.5rem; display:none; justify-content:center;" id="modeSwitchWrapper">
+            <div class="mode-switch">
+                <button class="mode-btn active" data-mode="student">👩‍🎓 Étudiant</button>
+                <button class="mode-btn" data-mode="admin" id="adminModeBtn">⚙️ Admin</button>
+            </div>
+        </div>
+
+        <div id="studentLobbyView" class="view active-view">
+            <div id="studentError"></div>
+            <div class="student-lobby">
+                <h2>📚 Tes quiz disponibles</h2>
+                <p>Choisis un quiz pour commencer l'aventure !</p>
+                <div class="student-quiz-grid" id="studentQuizGrid">
+                    <div class="loading">Chargement des quiz...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="studentQuizView" class="view">
+            <div id="studentQuizError"></div>
+            <button class="back-to-list-btn" id="backToListBtn">← Retour à la liste</button>
+            <div class="quiz-header">
+                <h2 id="quizTitleDisplay">📢 Chargement...</h2>
+                <div class="timer-badge" id="questionCounter">0/0</div>
+            </div>
+            <div class="question-area">
+                <div class="q-text" id="questionText">Chargement du quiz...</div>
+                <img id="questionImage" class="q-image" src="" alt="" style="display: none;">
+            </div>
+            <div class="options-grid" id="optionsContainer"></div>
+            <div class="feedback-msg" id="feedbackMsg"></div>
+            <div class="student-footer">
+                <span id="progressInfo">Question 1</span>
+                <button class="next-btn" id="nextQuestionBtn" disabled>➡️ Suivant</button>
+            </div>
+        </div>
+
+        <div id="adminView" class="view">
+            <div class="admin-header">
+                <h2>📋 Tableau de bord</h2>
+                <button class="create-btn" id="createQuizBtn">➕ Nouveau quiz</button>
+            </div>
+            <div id="adminError"></div>
+            <div class="quiz-list" id="quizListContainer">
+                <div class="loading">Chargement des quiz...</div>
+            </div>
+            <div class="insights-area" id="insightsArea">
+                <h3>📊 Statistiques globales</h3>
+                <div id="statsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUIZ MODAL -->
+    <div class="modal-overlay" id="quizModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Créer un quiz</h3>
+            <div class="form-group">
+                <label>📌 Titre du quiz</label>
+                <input type="text" id="quizTitleInput" placeholder="Ex: Faisons connaissance">
+            </div>
+            <div class="form-group">
+                <label>🔁 Nombre de tentatives autorisées</label>
+                <select id="quizMaxAttempts">
+                    <option value="0">♾️ Illimité (peut refaire à volonté)</option>
+                    <option value="1">1️⃣ Une seule fois (bloqué après)</option>
+                    <option value="2">2️⃣ Deux tentatives</option>
+                    <option value="3">3️⃣ Trois tentatives</option>
+                    <option value="5">5️⃣ Cinq tentatives</option>
+                </select>
+            </div>
+            <div id="questionsContainer"></div>
+            <button class="icon-btn" id="addQuestionBtn" style="margin-top:0.5rem;">➕ Ajouter une question</button>
+            <div class="modal-actions">
+                <button class="cancel-btn" id="cancelModalBtn">Annuler</button>
+                <button class="save-btn" id="saveQuizBtn">💾 Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ASSIGN MODAL -->
+    <div class="modal-overlay" id="assignModal">
+        <div class="modal-content">
+            <h3 id="assignModalTitle">🎯 Assigner le quiz</h3>
+            <div class="toggle-row">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="assignOpenToggle">
+                    <span class="toggle-slider"></span>
+                </label>
+                <div>
+                    <div class="toggle-label">Quiz ouvert</div>
+                    <div class="toggle-sublabel">Visible par les étudiants dès maintenant</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>🔁 Nombre de tentatives autorisées</label>
+                <select id="assignMaxAttempts">
+                    <option value="0">♾️ Illimité (peut refaire à volonté)</option>
+                    <option value="1">1️⃣ Une seule fois (bloqué après)</option>
+                    <option value="2">2️⃣ Deux tentatives</option>
+                    <option value="3">3️⃣ Trois tentatives</option>
+                    <option value="5">5️⃣ Cinq tentatives</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>👥 Assigner à des étudiants spécifiques</label>
+                <p style="font-size:0.85rem; color:#7a5e9a; font-weight:600; margin-bottom:0.6rem;">
+                    Laisse vide pour que tous les étudiants voient ce quiz
+                </p>
+                <div class="user-picker" id="assignUserPicker">
+                    <div class="loading" style="padding:1rem; color:#7a5e9a;">Chargement des étudiants...</div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="cancel-btn" id="cancelAssignModal">Annuler</button>
+                <button class="save-btn" id="saveAssignBtn">💾 Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATS MODAL -->
+    <div class="modal-overlay" id="statsModal">
+        <div class="modal-content">
+            <h3 id="statsModalTitle">📊 Statistiques détaillées</h3>
+            <div id="statsModalContent"></div>
+            <div class="modal-actions">
+                <button class="cancel-btn" id="closeStatsModal">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESPONSES MODAL (NEW) -->
+    <div class="modal-overlay" id="responsesModal">
+        <div class="modal-content wide">
+            <h3 id="responsesModalTitle">📋 Réponses des étudiants</h3>
+            <div class="resp-search">
+                <span>🔍</span>
+                <input type="text" id="respSearchInput" placeholder="Rechercher un étudiant...">
+            </div>
+            <div id="responsesModalContent">
+                <div class="loading">Chargement des réponses...</div>
+            </div>
+            <div class="modal-actions">
+                <button class="cancel-btn" id="closeResponsesModal">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SHARE MODAL -->
+    <div class="modal-overlay" id="shareModal">
+        <div class="modal-content share-modal">
+            <h3>🔗 Partager le quiz</h3>
+            <p id="shareQuizTitle" class="share-quiz-title">—</p>
+            <div class="share-link-box">
+                <input type="text" id="shareLinkInput" readonly>
+                <button class="copy-btn" id="copyLinkBtn">
+                    <span class="copy-icon">📋</span>
+                    <span class="copy-label">Copier</span>
+                </button>
+            </div>
+            <div class="share-qr-wrap">
+                <div id="shareQrCode"></div>
+                <p class="share-qr-hint">📱 Scanne avec ton téléphone</p>
+            </div>
+            <p class="share-options-label">Ou partage directement :</p>
+            <div class="share-options-grid">
+                <a id="shareWhatsapp" class="share-option whatsapp" target="_blank" rel="noopener">
+                    <span class="share-option-icon">💬</span><span>WhatsApp</span>
+                </a>
+                <a id="shareEmail" class="share-option email" target="_blank" rel="noopener">
+                    <span class="share-option-icon">📧</span><span>Email</span>
+                </a>
+                <a id="shareSms" class="share-option sms" target="_blank" rel="noopener">
+                    <span class="share-option-icon">📱</span><span>SMS</span>
+                </a>
+                <button id="shareNative" class="share-option native">
+                    <span class="share-option-icon">📤</span><span>Plus…</span>
+                </button>
+            </div>
+            <div class="modal-actions">
+                <button class="cancel-btn" id="closeShareModal">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+
+</html>
